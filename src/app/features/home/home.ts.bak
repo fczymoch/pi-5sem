@@ -1,0 +1,376 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { RouterModule } from '@angular/router';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { Chart } from 'chart.js/auto';
+import { DashboardService } from '../../core/services/dashboard.service';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    RouterModule,
+    MatGridListModule
+  ],
+  template: `
+    <div class="container">
+      <div class="dashboard-grid">
+        <!-- Quick Stats -->
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-icon">
+              <mat-icon color="primary">engineering</mat-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{totalForklifts}}</div>
+              <div class="stat-label">Empilhadeiras</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-icon">
+              <mat-icon color="accent">people</mat-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{totalEmployees}}</div>
+              <div class="stat-label">Funcionários</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-icon">
+              <mat-icon color="warn">warning</mat-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{maintenanceCount}}</div>
+              <div class="stat-label">Em Manutenção</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-icon">
+              <mat-icon color="primary">check_circle</mat-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{availableCount}}</div>
+              <div class="stat-label">Disponíveis</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Charts -->
+        <mat-card class="chart-card">
+          <mat-card-header>
+            <mat-card-title>Status das Empilhadeiras</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <canvas id="statusChart"></canvas>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="chart-card">
+          <mat-card-header>
+            <mat-card-title>Certificações dos Funcionários</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <canvas id="certificationsChart"></canvas>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Quick Actions -->
+        <mat-card class="actions-card">
+          <mat-card-header>
+            <mat-card-title>Ações Rápidas</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="quick-actions">
+              <a mat-raised-button color="primary" routerLink="/forklifts/new">
+                <mat-icon>add</mat-icon>
+                Nova Empilhadeira
+              </a>
+              <a mat-raised-button color="accent" routerLink="/employees/new">
+                <mat-icon>person_add</mat-icon>
+                Novo Funcionário
+              </a>
+              <button mat-raised-button color="warn">
+                <mat-icon>report</mat-icon>
+                Relatório de Manutenção
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Recent Activity -->
+        <mat-card class="activity-card">
+          <mat-card-header>
+            <mat-card-title>Atividade Recente</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="activity-list">
+              <div class="activity-item" *ngFor="let activity of recentActivities">
+                <mat-icon [color]="activity.color">{{activity.icon}}</mat-icon>
+                <div class="activity-details">
+                  <div class="activity-message">{{activity.message}}</div>
+                  <div class="activity-time">{{activity.time | date:'short'}}</div>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .stat-card {
+      mat-card-content {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+      }
+
+      .stat-icon {
+        margin-right: 16px;
+        mat-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+        }
+      }
+
+      .stat-content {
+        .stat-value {
+          font-size: 24px;
+          font-weight: bold;
+        }
+        .stat-label {
+          color: rgba(0, 0, 0, 0.6);
+        }
+      }
+    }
+
+    .chart-card {
+      grid-column: span 2;
+      height: 300px;
+
+      mat-card-content {
+        height: calc(100% - 68px);
+        canvas {
+          width: 100% !important;
+          height: 100% !important;
+        }
+      }
+    }
+
+    .actions-card {
+      grid-column: span 2;
+
+      .quick-actions {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+
+        [mat-raised-button] {
+          flex: 1;
+          min-width: 200px;
+        }
+      }
+    }
+
+    .activity-card {
+      grid-column: span 2;
+
+      .activity-list {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+
+        mat-icon {
+          margin-right: 16px;
+        }
+
+        .activity-details {
+          flex: 1;
+
+          .activity-time {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 12px;
+          }
+        }
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stat-card {
+        grid-column: span 1;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-card,
+      .actions-card,
+      .activity-card {
+        grid-column: span 1;
+      }
+    }
+  `]
+})
+export class HomeComponent implements OnInit {
+  totalForklifts = 0;
+  totalEmployees = 0;
+  maintenanceCount = 0;
+  availableCount = 0;
+
+  recentActivities = [
+    {
+      icon: 'engineering',
+      color: 'primary',
+      message: 'Empilhadeira XL-2000 entrou em manutenção',
+      time: new Date(2025, 9, 31, 14, 30)
+    },
+    {
+      icon: 'person',
+      color: 'accent',
+      message: 'Novo operador certificado: João Silva',
+      time: new Date(2025, 9, 31, 13, 15)
+    },
+    {
+      icon: 'check_circle',
+      color: 'primary',
+      message: 'Manutenção concluída: Empilhadeira FL-100',
+      time: new Date(2025, 9, 31, 11, 45)
+    }
+  ];
+
+  constructor(private dashboardService: DashboardService) {}
+
+  ngOnInit() {
+    this.loadDashboardData();
+    this.initializeCharts();
+  }
+
+  loadDashboardData() {
+    this.forkliftService.getForklifts().subscribe(forklifts => {
+      this.totalForklifts = forklifts.length;
+      this.maintenanceCount = forklifts.filter(f => f.status === 'maintenance').length;
+      this.availableCount = forklifts.filter(f => f.status === 'available').length;
+      this.updateStatusChart(forklifts);
+    });
+
+    this.employeeService.getEmployees().subscribe(employees => {
+      this.totalEmployees = employees.length;
+      this.updateCertificationsChart(employees);
+    });
+  }
+
+  initializeCharts() {
+    // Status Chart
+    new Chart('statusChart', {
+      type: 'doughnut',
+      data: {
+        labels: ['Disponível', 'Em Uso', 'Manutenção'],
+        datasets: [{
+          data: [0, 0, 0],
+          backgroundColor: ['#4caf50', '#2196f3', '#ff9800']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+
+    // Certifications Chart
+    new Chart('certificationsChart', {
+      type: 'bar',
+      data: {
+        labels: ['Operação de Empilhadeira', 'Segurança', 'Manutenção Básica'],
+        datasets: [{
+          label: 'Funcionários Certificados',
+          data: [0, 0, 0],
+          backgroundColor: '#1976d2'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        }
+      }
+    });
+  }
+
+  updateStatusChart(forklifts: any[]) {
+    const available = forklifts.filter(f => f.status === 'available').length;
+    const inUse = forklifts.filter(f => f.status === 'in-use').length;
+    const maintenance = forklifts.filter(f => f.status === 'maintenance').length;
+
+    const chart = Chart.getChart('statusChart');
+    if (chart) {
+      chart.data.datasets[0].data = [available, inUse, maintenance];
+      chart.update();
+    }
+  }
+
+  updateCertificationsChart(employees: any[]) {
+    const certifications = {
+      'Operação de Empilhadeira': 0,
+      'Segurança': 0,
+      'Manutenção Básica': 0
+    };
+
+    employees.forEach(employee => {
+      employee.certifications.forEach((cert: string) => {
+        if (cert in certifications) {
+          certifications[cert as keyof typeof certifications]++;
+        }
+      });
+    });
+
+    const chart = Chart.getChart('certificationsChart');
+    if (chart) {
+      chart.data.datasets[0].data = Object.values(certifications);
+      chart.update();
+    }
+  }
+}

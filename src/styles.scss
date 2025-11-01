@@ -1,0 +1,150 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Global styles */
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Layout utilities */
+.spacer {
+  flex: 1 1 auto;
+}
+
+/* Material overrides */
+app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+app-footer {
+  margin-top: auto;
+}
+
+  .main-content {
+    padding-top: 64px; /* Height of the header */
+    /* restore default bottom padding since footer is no longer fixed */
+    padding-bottom: 20px;
+    flex: 1;
+  }
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Data grid styles */
+.data-grid-container {
+  padding: 20px;
+}
+
+.data-grid-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-section {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  mat-form-field {
+    min-width: 200px;
+  }
+}
+
+.view-toggle {
+  margin-left: auto;
+}
+
+/* Card grid styles */
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+/* Status colors */
+.active { 
+  color: #4caf50;
+  &.mat-chip { background-color: #e8f5e9 !important; }
+}
+
+.inactive { 
+  color: #f44336;
+  &.mat-chip { background-color: #ffebee !important; }
+}
+
+.available { 
+  color: #4caf50;
+  &.mat-chip { background-color: #e8f5e9 !important; }
+}
+
+.in-use { 
+  color: #2196f3;
+  &.mat-chip { background-color: #e3f2fd !important; }
+}
+
+.maintenance { 
+  color: #ff9800;
+  &.mat-chip { background-color: #fff3e0 !important; }
+}
+
+/* Form styles */
+.form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.form-field {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 599px) {
+  .main-content {
+    padding-top: 56px; /* Height of the header on mobile */
+  }
+
+  .container {
+    padding: 16px;
+  }
+
+  .filter-section {
+    flex-direction: column;
+    align-items: stretch;
+    mat-form-field {
+      width: 100%;
+    }
+  }
+}
