@@ -145,8 +145,7 @@ export class ForkliftFormComponent implements OnInit {
     lastMaintenanceDate: new Date(),
     nextMaintenanceDate: new Date(),
     status: 'available',
-    location: '',
-    isInactive: false
+    location: ''
   };
   isEdit = false;
   formFields: FormField[] = [
@@ -154,10 +153,6 @@ export class ForkliftFormComponent implements OnInit {
     { key: 'serialNumber', label: 'Número de Série', type: 'text', required: true },
     { key: 'manufacturer', label: 'Fabricante', type: 'text', required: true },
     { key: 'capacity', label: 'Capacidade (kg)', type: 'number', required: true },
-    { key: 'isInactive', label: 'Equipamento Inativo', type: 'select', required: true, options: [
-      { value: false, label: 'Não' },
-      { value: true, label: 'Sim' }
-    ]},
     {
       key: 'status',
       label: 'Status',
@@ -165,7 +160,7 @@ export class ForkliftFormComponent implements OnInit {
       required: true,
       options: [
         { value: 'available', label: 'Disponível' },
-        { value: 'in-use', label: 'Em Uso' },
+        { value: 'inUse', label: 'Em Uso' },
         { value: 'maintenance', label: 'Em Manutenção' }
       ]
     },
@@ -184,7 +179,7 @@ export class ForkliftFormComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEdit = true;
-      this.forkliftService.getForklift(Number(id)).subscribe(forklift => {
+      this.forkliftService.getForkliftById(Number(id)).subscribe((forklift: Forklift | undefined) => {
         if (forklift) {
           this.forklift = forklift;
         }

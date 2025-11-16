@@ -7,8 +7,6 @@ export interface Employee {
   phone: string;
   hiringDate: Date;
   status: 'active' | 'inactive';
-  certifications: string[];
   lastTrainingDate: Date;
-  /** Lista de cursos do funcionário (opcional) */
-  courses?: string[];
+  courses: string[];
 }

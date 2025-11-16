@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, interval } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, catchError, map, of } from 'rxjs';
+import { ApiService } from './api.service';
+import { ApiDashboardResponse, ApiActivityLogResponse } from '../models/api.interfaces';
+import { ApiMapper } from '../models/api.mapper';
+import { ActivityLog } from '../models/activity-log';
 
 export interface DashboardData {
   forkliftStatus: {
@@ -25,75 +28,92 @@ export interface DashboardData {
   providedIn: 'root'
 })
 export class DashboardService {
-  private mockData$ = new BehaviorSubject<DashboardData>({
-    forkliftStatus: {
-      available: 8,
-      inUse: 5,
-      maintenance: 2
-    },
-    employeeCertifications: {
-      valid: 15,
-      expiring: 3,
-      expired: 2
-    },
-    stats: {
-      totalForklifts: 15,
-      totalEmployees: 20,
-      maintenanceCount: 2,
-      availableCount: 8
-    }
-  });
-
-  constructor() {
-    // Atualiza os dados a cada minuto
-    interval(60000).subscribe(() => {
-      this.updateMockData();
-    });
+  constructor(private apiService: ApiService) {
+    // Construtor limpo - apenas injeta o serviço de API
   }
 
   getDashboardData(): Observable<DashboardData> {
-    return this.mockData$.asObservable();
+    console.log('📊 Buscando dados do dashboard...');
+    
+    return this.apiService.get<ApiDashboardResponse>('/dashboard').pipe(
+      map(apiResponse => {
+        console.log('✅ Dados recebidos da API:', apiResponse);
+        return ApiMapper.mapDashboardFromApi(apiResponse);
+      }),
+      catchError((error) => {
+        console.error('❌ Dashboard não disponível da API:', error.message);
+        // Retorna dados zerados quando API não está disponível
+        return of({
+          forkliftStatus: {
+            available: 0,
+            inUse: 0,
+            maintenance: 0
+          },
+          employeeCertifications: {
+            valid: 0,
+            expiring: 0,
+            expired: 0
+          },
+          stats: {
+            totalForklifts: 0,
+            totalEmployees: 0,
+            maintenanceCount: 0,
+            availableCount: 0
+          }
+        });
+      })
+    );
   }
 
-  private updateMockData() {
-    const currentData = this.mockData$.getValue();
-    
-    // Simula mudanças aleatórias nos dados
-    const newData: DashboardData = {
-      forkliftStatus: {
-        available: this.adjustNumber(currentData.forkliftStatus.available, 1),
-        inUse: this.adjustNumber(currentData.forkliftStatus.inUse, 1),
-        maintenance: this.adjustNumber(currentData.forkliftStatus.maintenance, 1, true)
-      },
-      employeeCertifications: {
-        valid: this.adjustNumber(currentData.employeeCertifications.valid, 2),
-        expiring: this.adjustNumber(currentData.employeeCertifications.expiring, 1),
-        expired: this.adjustNumber(currentData.employeeCertifications.expired, 1, true)
-      },
-      stats: {
-        totalForklifts: currentData.stats.totalForklifts,
-        totalEmployees: currentData.stats.totalEmployees,
-        maintenanceCount: 0,
-        availableCount: 0
-      }
-    };
-
-    // Atualiza os stats baseado nos novos valores
-    newData.stats.maintenanceCount = newData.forkliftStatus.maintenance;
-    newData.stats.availableCount = newData.forkliftStatus.available;
-
-    this.mockData$.next(newData);
+  getConnectionStatus(): Observable<any> {
+    return this.apiService.connectionStatus;
   }
 
-  private adjustNumber(current: number, maxChange: number, preferDecrease = false): number {
-    const change = Math.floor(Math.random() * (maxChange + 1));
-    const increase = preferDecrease ? Math.random() > 0.7 : Math.random() > 0.3;
+  getRecentActivities(limit: number = 10): Observable<ActivityLog[]> {
+    console.log('📋 Buscando atividades recentes da API...');
     
-    let newValue = increase ? current + change : current - change;
-    
-    // Mantém os valores dentro de limites razoáveis
-    newValue = Math.max(0, Math.min(20, newValue));
-    
-    return newValue;
+    return this.apiService.get<ApiActivityLogResponse[]>(`/dashboard/recent-activities?limit=${limit}`).pipe(
+      map(apiResponse => {
+        console.log('✅ Atividades recebidas da API:', apiResponse.length, 'itens');
+        return apiResponse.map(activity => ApiMapper.mapActivityLogFromApi(activity));
+      }),
+      catchError((error) => {
+        console.error('❌ Erro ao buscar atividades da API:', error.message);
+        console.log('📋 Retornando atividades mock - aguardando backend estar disponível');
+        // Retorna atividades mock quando API não está disponível
+        return of([
+          {
+            id: 1,
+            operationType: 'MAINTENANCE',
+            entity: 'Empilhadeira',
+            description: 'Empilhadeira XL-2000 entrou em manutenção',
+            timestamp: new Date(2025, 10, 16, 14, 30),
+            details: 'Manutenção preventiva programada',
+            icon: 'build',
+            color: 'warn'
+          },
+          {
+            id: 2,
+            operationType: 'CREATE',
+            entity: 'Funcionário',
+            description: 'Novo operador certificado: João Silva',
+            timestamp: new Date(2025, 10, 16, 13, 15),
+            details: 'Certificação para empilhadeiras elétricas',
+            icon: 'add_circle',
+            color: 'primary'
+          },
+          {
+            id: 3,
+            operationType: 'COMPLETE',
+            entity: 'Empilhadeira',
+            description: 'Manutenção concluída: Empilhadeira FL-100',
+            timestamp: new Date(2025, 10, 16, 11, 45),
+            details: 'Troca de óleo e filtros',
+            icon: 'check_circle',
+            color: 'primary'
+          }
+        ]);
+      })
+    );
   }
 }

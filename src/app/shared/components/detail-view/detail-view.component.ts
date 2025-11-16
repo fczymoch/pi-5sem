@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
+import { BrDatePipe } from '../../pipes/br-date.pipe';
 
 @Component({
   selector: 'app-detail-view',
@@ -15,7 +16,8 @@ import { MatChipsModule } from '@angular/material/chips';
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
-    MatChipsModule
+    MatChipsModule,
+    BrDatePipe
   ],
   template: `
     <mat-card class="detail-card">
@@ -33,7 +35,7 @@ import { MatChipsModule } from '@angular/material/chips';
             <div class="field" *ngIf="field.key !== titleField && field.key !== subtitleField">
               <strong>{{ field.label }}:</strong>
               <ng-container [ngSwitch]="field.type">
-                <span *ngSwitchCase="'date'">{{ data[field.key] | date:'medium' }}</span>
+                <span *ngSwitchCase="'date'">{{ data[field.key] | brDate }}</span>
                 <mat-chip *ngSwitchCase="'status'" [class]="data[field.key]">
                   {{ data[field.key] }}
                 </mat-chip>
@@ -51,15 +53,18 @@ import { MatChipsModule } from '@angular/material/chips';
 
       <mat-divider></mat-divider>
 
-      <mat-card-actions align="end">
+      <mat-card-actions align="end" class="card-actions">
         <button mat-button color="accent" (click)="onEdit.emit(data)">
-          <mat-icon>edit</mat-icon> Edit
+          <mat-icon>edit</mat-icon>
+          <span class="action-text">Editar</span>
         </button>
         <button mat-button color="warn" (click)="onDelete.emit(data)">
-          <mat-icon>delete</mat-icon> Delete
+          <mat-icon>delete</mat-icon>
+          <span class="action-text">Deletar</span>
         </button>
         <button mat-button (click)="onBack.emit()">
-          <mat-icon>arrow_back</mat-icon> Back
+          <mat-icon>arrow_back</mat-icon>
+          <span class="action-text">Voltar</span>
         </button>
       </mat-card-actions>
     </mat-card>
@@ -67,22 +72,61 @@ import { MatChipsModule } from '@angular/material/chips';
   styles: [`
     .detail-card {
       margin: 20px;
-      max-width: 1100px; /* increase width so details use more of the page */
+      max-width: 100%;
       width: 100%;
+      padding: 0;
+    }
+
+    mat-card-header {
+      padding: 24px;
+    }
+
+    mat-card-content {
+      padding: 0 24px 24px;
     }
 
     .content-grid {
       display: grid;
-      /* allow more responsive columns and avoid leaving large empty space */
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 24px;
-      padding: 24px 0;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px 0;
     }
 
     .field {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      padding: 12px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+    }
+
+    .field strong {
+      color: rgba(0, 0, 0, 0.7);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .card-actions button {
+      flex: 1;
+      min-width: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .action-text {
+      display: none;
     }
 
     .active { background-color: #c8e6c9 !important; }
@@ -98,7 +142,45 @@ import { MatChipsModule } from '@angular/material/chips';
       background-color: #f5f5f5;
       width: 56px;
       height: 56px;
-      border-radius: 8px;
+      border-radius: 50%;
+      margin-right: 16px;
+    }
+
+    mat-card-avatar mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+
+    @media (min-width: 600px) {
+      .detail-card {
+        margin: 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .content-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .card-actions button {
+        flex: none;
+      }
+
+      .action-text {
+        display: inline;
+      }
+    }
+
+    @media (min-width: 1000px) {
+      .content-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .detail-card {
+        max-width: 1200px;
+        margin: 24px auto;
+      }
     }
 
     mat-card-header mat-icon {

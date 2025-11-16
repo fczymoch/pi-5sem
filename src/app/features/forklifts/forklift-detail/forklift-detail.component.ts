@@ -12,6 +12,10 @@ import { ForkliftUsageService } from '../../../core/services/forklift-usage.serv
 import { Forklift } from '../../../core/models/forklift';
 import { ForkliftUsage } from '../../../core/models/forklift-usage';
 
+interface ForkliftUsageWithDuration extends ForkliftUsage {
+  duration: number;
+}
+
 @Component({
   selector: 'app-forklift-detail',
   standalone: true,
@@ -42,19 +46,16 @@ import { ForkliftUsage } from '../../../core/models/forklift-usage';
           (onBack)="goBack()">
         </app-detail-view>
 
-        <mat-card class="usage-section">
+        <mat-card class="usage-section" *ngIf="currentUsage">
           <mat-card-header>
-            <mat-card-title>Status Atual</mat-card-title>
+            <mat-card-title>Uso Atual</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <div class="status-info">
-              <div [class]="'status-badge ' + forklift.status">
-                {{getStatusLabel(forklift.status)}}
-              </div>
-              <div class="current-user" *ngIf="currentUsage">
-                Em uso por: {{currentUsage.employee?.name}}
+            <div class="current-usage-info">
+              <div class="current-user">
+                <strong>Operador:</strong> {{currentUsage.employee?.name}}
                 <br>
-                Desde: {{currentUsage.startTime | date:'short'}}
+                <strong>Iniciado em:</strong> {{currentUsage.startTime | date:'short'}}
               </div>
             </div>
           </mat-card-content>
@@ -119,24 +120,15 @@ import { ForkliftUsage } from '../../../core/models/forklift-usage';
       gap: 20px;
     }
 
-    .status-info {
-      display: flex;
-      align-items: center;
-      gap: 20px;
+    .current-usage-info {
       padding: 16px;
     }
 
-    .status-badge {
-      padding: 8px 16px;
-      border-radius: 16px;
-      font-weight: 500;
-      text-transform: uppercase;
-      font-size: 0.9em;
-    }
-
-    .status-badge.available {
-      background-color: #4caf50;
-      color: white;
+    .current-user {
+      padding: 16px;
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      border-left: 4px solid #2196f3;
     }
 
     .status-badge.in-use {
@@ -234,8 +226,7 @@ export class ForkliftDetailComponent implements OnInit {
     { key: 'serialNumber', label: 'Número de Série', type: 'text' },
     { key: 'manufacturer', label: 'Fabricante', type: 'text' },
     { key: 'capacity', label: 'Capacidade (kg)', type: 'text' },
-    { key: 'isInactive', label: 'Equipamento Inativo', type: 'text' },
-    { key: 'status', label: 'Status', type: 'status' },
+    { key: 'statusLabel', label: 'Status', type: 'text' },
     { key: 'location', label: 'Localização', type: 'text' },
     { key: 'lastMaintenanceDate', label: 'Última Manutenção', type: 'date' },
     { key: 'nextMaintenanceDate', label: 'Próxima Manutenção', type: 'date' }
@@ -253,7 +244,7 @@ export class ForkliftDetailComponent implements OnInit {
     if (idParam) {
       const id = Number(idParam);
       // Carregar empilhadeira
-      this.forkliftService.getForklift(id).subscribe(forklift => {
+      this.forkliftService.getForkliftById(id).subscribe((forklift: Forklift | undefined) => {
         this.forklift = forklift || null;
       });
 
@@ -264,9 +255,11 @@ export class ForkliftDetailComponent implements OnInit {
 
       // Carregar histórico de uso
       this.usageService.getForkliftHistory(id).subscribe(history => {
+        console.log('📋 Histórico de uso carregado:', history.length, 'registros');
         this.usageHistory = history.map(usage => ({
           ...usage,
-          duration: this.calculateDuration(usage.startTime, usage.endTime)
+          // Usa a duração da API se disponível, senão calcula
+          duration: (usage as any).duracaoHoras || this.calculateDuration(usage.startTime, usage.endTime)
         }));
         this.calculateUsageStats(history);
       });
@@ -276,7 +269,7 @@ export class ForkliftDetailComponent implements OnInit {
   getStatusLabel(status: string): string {
     switch (status) {
       case 'available': return 'Disponível';
-      case 'in-use': return 'Em Uso';
+      case 'inUse': return 'Em Uso';
       case 'maintenance': return 'Manutenção';
       default: return status;
     }
@@ -308,7 +301,9 @@ export class ForkliftDetailComponent implements OnInit {
           usageCount: 0
         };
 
-        current.totalHours += this.calculateDuration(usage.startTime, usage.endTime);
+        // Usa a duração da API se disponível, senão calcula
+        const duration = (usage as any).duracaoHoras || this.calculateDuration(usage.startTime, usage.endTime);
+        current.totalHours += duration;
         current.usageCount++;
         statsMap.set(key, current);
       }
@@ -328,7 +323,7 @@ export class ForkliftDetailComponent implements OnInit {
   }
 
   loadForklift(id: number) {
-    this.forkliftService.getForklift(id).subscribe(forklift => {
+    this.forkliftService.getForkliftById(id).subscribe((forklift: Forklift | undefined) => {
       this.forklift = forklift || null;
     });
   }
@@ -353,7 +348,7 @@ export class ForkliftDetailComponent implements OnInit {
     if (!this.forklift) return null;
     return {
       ...this.forklift,
-      isInactive: this.forklift.isInactive ? 'Sim' : 'Não'
+      statusLabel: this.getStatusLabel(this.forklift.status)
     };
   }
 

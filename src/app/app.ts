@@ -24,17 +24,26 @@ import { FooterComponent } from './shared/components/footer/footer.component';
     :host {
       display: block;
       min-height: 100vh;
+      width: 100%;
+      overflow-x: hidden;
     }
 
     .main-content {
-      padding: 84px 20px 68px;
+      padding: 84px 8px 68px;
       min-height: calc(100vh - 152px);
+      width: 100%;
+      overflow-x: hidden;
     }
 
-    @media (max-width: 599px) {
+    @media (min-width: 600px) {
       .main-content {
-        padding: 76px 16px 64px;
-        min-height: calc(100vh - 140px);
+        padding: 84px 16px 68px;
+      }
+    }
+
+    @media (min-width: 900px) {
+      .main-content {
+        padding: 84px 24px 68px;
       }
     }
   `]

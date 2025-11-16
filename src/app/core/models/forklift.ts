@@ -6,8 +6,7 @@ export interface Forklift {
   capacity: number;
   lastMaintenanceDate: Date;
   nextMaintenanceDate: Date;
-  status: 'available' | 'in-use' | 'maintenance';
+  status: 'available' | 'inUse' | 'maintenance';
   location: string;
   assignedTo?: number;
-  isInactive: boolean;
 }

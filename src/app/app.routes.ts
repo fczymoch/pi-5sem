@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'home', loadComponent: () => import('./features/home/landing.component').then(m => m.LandingComponent) },
-  { path: 'dashboard', loadComponent: () => import('./features/home/home').then(m => m.HomeComponent) },
+  { path: 'dashboard', loadComponent: () => import('./features/home/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'employees', loadComponent: () => import('./features/employees/employees.component').then(m => m.EmployeesComponent) },
   { path: 'employees/new', loadComponent: () => import('./features/employees/employee-form/employee-form.component').then(m => m.EmployeeFormComponent) },
   { path: 'employees/:id', loadComponent: () => import('./features/employees/employee-detail/employee-detail.component').then(m => m.EmployeeDetailComponent) },

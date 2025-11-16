@@ -116,13 +116,26 @@ import { Subscription, interval } from 'rxjs';
                 <mat-icon>person_add</mat-icon>
                 Novo Funcionário
               </a>
-              <button mat-raised-button color="warn">
+              <a mat-raised-button routerLink="/forklifts">
+                <mat-icon>view_list</mat-icon>
+                Ver Empilhadeiras
+              </a>
+              <a mat-raised-button routerLink="/employees">
+                <mat-icon>groups</mat-icon>
+                Ver Funcionários
+              </a>
+              <!-- Hidden for future use - maintenance report button -->
+              <!-- 
+              <button mat-raised-button color="warn" style="display: none;">
                 <mat-icon>report</mat-icon>
                 Relatório de Manutenção
               </button>
+              -->
             </div>
           </mat-card-content>
         </mat-card>
+
+
 
         <!-- Recent Activity -->
         <mat-card class="activity-card">
@@ -145,162 +158,20 @@ import { Subscription, interval } from 'rxjs';
     </div>
   `,
   styles: [`
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      padding: 20px;
+    .dashboard-grid { 
+      display: grid; 
+      gap: 20px; 
+      padding: 20px; 
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
     }
-
-    .stat-card {
-      mat-card-content {
-        display: flex;
-        align-items: center;
-        padding: 16px;
-      }
-
-      .stat-icon {
-        margin-right: 16px;
-
-        mat-icon {
-          font-size: 48px;
-          width: 48px;
-          height: 48px;
-        }
-      }
-
-      .stat-content {
-        .stat-value {
-          font-size: 24px;
-          font-weight: bold;
-        }
-        .stat-label {
-          color: rgba(0, 0, 0, 0.6);
-        }
-      }
+    .stat-card mat-card-content { 
+      display: flex; 
+      align-items: center; 
     }
-
-    .chart-card {
-      grid-column: span 2;
-      height: 520px; /* increased for more space */
-      overflow: visible;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chart-card .chart-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 8px 12px;
-    }
-
-    .chart-card .chart-controls .timer {
-      font-size: 0.95rem;
-    }
-
-    .chart-card mat-card-content {
-      display: flex;
-      flex-direction: column;
-      flex: 1 1 auto;
-      padding: 8px 12px 12px 12px;
-      min-height: 0;
-    }
-
-    .chart-card .chart-wrapper {
-      flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-      position: relative;
-    }
-
-    .chart-card .chart-wrapper canvas {
-      width: 100% !important;
-      height: 100% !important;
-      max-height: 100% !important;
-    }
-
-    @media (max-width: 1200px) {
-      .chart-card {
-        height: 420px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .chart-card {
-        height: 360px;
-      }
-      .chart-card .chart-controls {
-        margin: 6px 8px;
-      }
-    }
-
-    .actions-card {
-      grid-column: span 2;
-
-      .quick-actions {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-
-        [mat-raised-button] {
-          flex: 1;
-          min-width: 200px;
-        }
-      }
-    }
-
-    .activity-card {
-      grid-column: span 2;
-
-      .activity-list {
-        max-height: 300px;
-        overflow-y: auto;
-      }
-
-      .activity-item {
-        display: flex;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-
-        mat-icon {
-          margin-right: 16px;
-        }
-
-        .activity-details {
-          flex: 1;
-
-          .activity-time {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 12px;
-          }
-        }
-      }
-    }
-
-    @media (max-width: 1200px) {
-      .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .stat-card {
-        grid-column: span 1;
-      }
-    }
-
-    @media (max-width: 600px) {
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .chart-card,
-      .actions-card,
-      .activity-card {
-        grid-column: span 1;
-      }
+    .quick-actions { 
+      display: flex; 
+      gap: 16px; 
+      flex-wrap: wrap; 
     }
   `]
 })
@@ -336,105 +207,97 @@ export class HomeComponent implements OnInit {
     }
   ];
 
-  private subscription: Subscription = new Subscription();
-
   constructor(private dashboardService: DashboardService) {}
 
   ngOnInit() {
-    // create charts with initial empty values
-    this.initializeCharts();
+    this.loadDashboardData();
+    this.startRefreshTimer();
+    this.initCharts();
+  }
 
-    // subscribe to mock dashboard data and update stats + charts every time data changes
-    this.subscription = this.dashboardService.getDashboardData().subscribe(data => {
+  ngOnDestroy() {
+    this.timerSub?.unsubscribe();
+  }
+
+  private loadDashboardData() {
+    this.dashboardService.getDashboardData().subscribe(data => {
       this.totalForklifts = data.stats.totalForklifts;
       this.totalEmployees = data.stats.totalEmployees;
       this.maintenanceCount = data.stats.maintenanceCount;
       this.availableCount = data.stats.availableCount;
-
-      // update status chart
-      const statusChart = Chart.getChart('statusChart');
-      if (statusChart) {
-        statusChart.data.datasets[0].data = [
-          data.forkliftStatus.available,
-          data.forkliftStatus.inUse,
-          data.forkliftStatus.maintenance
-        ];
-        statusChart.update();
-      }
-
-      // update certifications chart
-      const certChart = Chart.getChart('certificationsChart');
-      if (certChart) {
-        certChart.data.datasets[0].data = [
-          data.employeeCertifications.valid,
-          data.employeeCertifications.expiring,
-          data.employeeCertifications.expired
-        ];
-        certChart.update();
-      }
-
-      // reset visible countdown whenever new data arrives
-      this.secondsLeft = 60;
-    });
-
-    // start visible countdown timer
-    this.timerSub = interval(1000).subscribe(() => {
-      if (this.secondsLeft > 0) {
-        this.secondsLeft--;
-      }
     });
   }
 
-  ngOnDestroy() {
-    this.subscription.unsubscribe();
-    this.timerSub.unsubscribe();
+  private startRefreshTimer() {
+    this.timerSub = interval(1000).subscribe(() => {
+      this.secondsLeft--;
+      if (this.secondsLeft <= 0) {
+        this.loadDashboardData();
+        this.secondsLeft = 60; // Reset timer
+      }
+    });
   }
 
   onManualRefresh() {
-    // For now just log placeholder (integration TODO)
-    console.log('TODO: integrar com backend');
+    this.loadDashboardData();
+    this.secondsLeft = 60; // Reset timer
   }
 
-  initializeCharts() {
-    // Status Chart
-    const legendPosition = (typeof window !== 'undefined' && window.innerWidth < 768) ? 'bottom' : 'right';
-    new Chart('statusChart', {
-      type: 'doughnut',
-      data: {
-        labels: ['Disponíveis', 'Em Uso', 'Manutenção'],
-        datasets: [{
-          data: [0, 0, 0],
-          backgroundColor: ['#4CAF50', '#FFA726', '#F44336']
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: legendPosition as any, labels: { boxWidth: 12 } }
-        }
-      }
-    });
+  private initCharts() {
+    setTimeout(() => {
+      this.createStatusChart();
+      this.createCertificationsChart();
+    }, 100);
+  }
 
-    // Certifications Chart
-    new Chart('certificationsChart', {
-      type: 'bar',
-      data: {
-        labels: ['Válidas', 'A Vencer', 'Vencidas'],
-        datasets: [{
-          label: 'Certificações',
-          data: [0, 0, 0],
-          backgroundColor: ['#4CAF50', '#FFA726', '#F44336']
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+  private createStatusChart() {
+    const ctx = document.getElementById('statusChart') as HTMLCanvasElement;
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Disponível', 'Em Uso', 'Manutenção'],
+          datasets: [{
+            data: [this.availableCount, this.totalForklifts - this.availableCount - this.maintenanceCount, this.maintenanceCount],
+            backgroundColor: ['#4CAF50', '#2196F3', '#FF9800']
+          }]
         },
-        plugins: { legend: { display: false } }
-      }
-    });
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+  }
+
+  private createCertificationsChart() {
+    const ctx = document.getElementById('certificationsChart') as HTMLCanvasElement;
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Operação de Empilhadeira', 'Segurança', 'Manutenção Básica', 'Controle de Qualidade'],
+          datasets: [{
+            label: 'Funcionários Certificados',
+            data: [15, 12, 8, 6],
+            backgroundColor: '#2196F3'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
   }
 }

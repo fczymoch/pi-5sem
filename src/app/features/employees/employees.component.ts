@@ -65,13 +65,28 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
         </mat-form-field>
       </div>
 
+      <!-- Loading state -->
+      <div *ngIf="isLoading" class="loading-message">
+        <mat-icon>refresh</mat-icon>
+        <p>Carregando funcionários...</p>
+      </div>
+
+      <!-- Data grid quando há dados -->
       <app-data-grid
+        *ngIf="!isLoading && employees.length > 0"
         [data]="filteredEmployees"
         [columns]="columns"
         (onView)="viewEmployee($event)"
         (onEdit)="editEmployee($event)"
         (onDelete)="deleteEmployee($event)">
       </app-data-grid>
+
+      <!-- Mensagem quando não há dados (após carregamento) -->
+      <div *ngIf="!isLoading && employees.length === 0" class="no-data-message">
+        <mat-icon>cloud_off</mat-icon>
+        <h3>Nenhum funcionário encontrado</h3>
+        <p>Os dados não estão disponíveis. Verifique se o backend está rodando ou se há funcionários cadastrados.</p>
+      </div>
     </div>
   `,
   styles: [`
@@ -101,6 +116,33 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
       min-width: 200px;
     }
 
+    .no-data-message, .loading-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: #666;
+    }
+
+    .no-data-message mat-icon, .loading-message mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .loading-message mat-icon {
+      animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     @media (max-width: 600px) {
       .filter-section {
         flex-direction: column;
@@ -116,6 +158,7 @@ export class EmployeesComponent implements OnInit {
   employees: Employee[] = [];
   filteredEmployees: Employee[] = [];
   departments: string[] = [];
+  isLoading: boolean = false;
   
   // Form controls para filtros
   searchControl = new FormControl('');
@@ -141,11 +184,25 @@ export class EmployeesComponent implements OnInit {
   }
 
   loadEmployees() {
-    this.employeeService.getEmployees().subscribe(employees => {
-      this.employees = employees;
-      this.filteredEmployees = employees;
-      this.departments = [...new Set(employees.map(e => e.department))];
-      this.applyFilters();
+    console.log('🔄 Componente: Iniciando carregamento de funcionários');
+    this.isLoading = true;
+    this.employeeService.getEmployees().subscribe({
+      next: (employees) => {
+        console.log('📋 Componente: Funcionários recebidos do service:', employees.length, 'itens', employees);
+        this.employees = employees;
+        this.filteredEmployees = employees;
+        this.departments = [...new Set(employees.map(e => e.department))];
+        this.applyFilters();
+        this.isLoading = false;
+        console.log('✅ Componente: Carregamento concluído. Exibindo:', this.filteredEmployees.length, 'funcionários');
+      },
+      error: (error) => {
+        console.error('❌ Componente: Erro ao carregar funcionários:', error);
+        this.employees = [];
+        this.filteredEmployees = [];
+        this.departments = [];
+        this.isLoading = false;
+      }
     });
   }
 

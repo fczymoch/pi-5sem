@@ -1,6 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { ApiService } from './api.service';
 import { ForkliftUsage } from '../models/forklift-usage';
+import { ApiForkliftUsageHistoryResponse } from '../models/api.interfaces';
+import { ApiMapper } from '../models/api.mapper';
 
 @Injectable({
   providedIn: 'root'
@@ -26,14 +30,31 @@ export class ForkliftUsageService {
     }
   ];
 
-  constructor() {}
+  constructor(private apiService: ApiService) {}
 
   getUsageHistory(): Observable<ForkliftUsage[]> {
     return of(this.mockUsageHistory);
   }
 
   getForkliftHistory(forkliftId: number): Observable<ForkliftUsage[]> {
-    return of(this.mockUsageHistory.filter(usage => usage.forkliftId === forkliftId));
+    console.log('📋 Buscando histórico de uso da empilhadeira:', forkliftId);
+    
+    return this.apiService.get<ApiForkliftUsageHistoryResponse[]>(`/forklifts/${forkliftId}/usage-history`).pipe(
+      map(apiResponse => {
+        console.log('✅ Histórico de uso recebido da API:', apiResponse.length, 'itens');
+        return apiResponse.map(usage => {
+          const mapped = ApiMapper.mapForkliftUsageHistoryFromApi(usage);
+          // Define o forkliftId no objeto mapeado
+          mapped.forkliftId = forkliftId;
+          return mapped;
+        });
+      }),
+      catchError((error) => {
+        console.error('❌ Erro ao buscar histórico de uso da API:', error.message);
+        console.log('📋 Retornando histórico mock - aguardando backend estar disponível');
+        return of(this.mockUsageHistory.filter(usage => usage.forkliftId === forkliftId));
+      })
+    );
   }
 
   getEmployeeHistory(employeeId: number): Observable<ForkliftUsage[]> {
@@ -41,9 +62,32 @@ export class ForkliftUsageService {
   }
 
   getCurrentUsage(forkliftId: number): Observable<ForkliftUsage | undefined> {
-    return of(this.mockUsageHistory.find(usage => 
-      usage.forkliftId === forkliftId && !usage.endTime
-    ));
+    console.log('🔄 Buscando uso atual da empilhadeira:', forkliftId);
+    
+    return this.apiService.get<ApiForkliftUsageHistoryResponse[]>('/forklift-usages/active').pipe(
+      map(apiResponse => {
+        console.log('✅ Usos ativos recebidos da API:', apiResponse.length, 'itens');
+        const currentUsage = apiResponse.find(usage => 
+          // Assumindo que o backend retorna o ID da empilhadeira em um campo específico
+          // Ajustar conforme a resposta real da API
+          usage.status === 1 // 1 = ACTIVE
+        );
+        
+        if (currentUsage) {
+          const mapped = ApiMapper.mapForkliftUsageHistoryFromApi(currentUsage);
+          mapped.forkliftId = forkliftId;
+          return mapped;
+        }
+        return undefined;
+      }),
+      catchError((error) => {
+        console.error('❌ Erro ao buscar uso atual da API:', error.message);
+        console.log('📋 Retornando uso mock - aguardando backend estar disponível');
+        return of(this.mockUsageHistory.find(usage => 
+          usage.forkliftId === forkliftId && !usage.endTime
+        ));
+      })
+    );
   }
 
   startUsage(employeeId: number, forkliftId: number): Observable<ForkliftUsage> {
